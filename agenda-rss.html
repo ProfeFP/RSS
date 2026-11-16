@@ -1,0 +1,623 @@
+<!DOCTYPE html>
+<html lang="ca">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>Agenda d'activitats · El Círcol de Reus</title>
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link href="https://fonts.googleapis.com/css2?family=Roboto:wght@400;500;700&display=swap" rel="stylesheet">
+<style>
+/* =====================================================================
+   AGENDA RSS · El Círcol de Reus
+   Rèplica de la vista "Llista" de The Events Calendar (elcircoldereus.cat/events)
+   Tot l'estil queda dins de #agenda-circol, per poder-ho enganxar en un
+   mòdul de codi de Divi/WordPress sense trencar res de la resta de la web.
+   ===================================================================== */
+#agenda-circol{
+  --ac-accent:#c40d0d;
+  --ac-accent-hover:rgba(196,13,13,.8);
+  --ac-accent-bg:rgba(196,13,13,.07);
+  --ac-text:#141827;
+  --ac-text-2:#5d5d5d;
+  --ac-text-3:#727272;
+  --ac-border:#d5d5d5;
+  --ac-border-2:#e4e4e4;
+  --ac-font:"Roboto",Helvetica,Arial,Lucida,sans-serif;
+  font-family:var(--ac-font);color:var(--ac-text);
+  max-width:1176px;margin:0 auto;padding:24px 20px 48px;box-sizing:border-box;
+  -webkit-font-smoothing:antialiased;
+}
+#agenda-circol *,#agenda-circol *::before,#agenda-circol *::after{box-sizing:border-box}
+#agenda-circol a{color:inherit;text-decoration:none}
+#agenda-circol button{font-family:inherit;cursor:pointer}
+#agenda-circol .ac-sr{position:absolute!important;width:1px;height:1px;overflow:hidden;clip:rect(0 0 0 0);white-space:nowrap}
+
+/* ---------- Barra de cerca + selector de vista ---------- */
+#agenda-circol .ac-bar{display:flex;align-items:center;border:1px solid var(--ac-border);border-radius:4px;
+  background:#fff;box-shadow:0 2px 5px 0 rgba(0,0,0,.04);height:56px;padding:0 0 0 16px;margin-bottom:24px}
+#agenda-circol .ac-search{flex:1;display:flex;align-items:center;height:100%;gap:10px;min-width:0}
+#agenda-circol .ac-search svg{width:16px;height:16px;flex:none;fill:var(--ac-text-3)}
+#agenda-circol .ac-search input{flex:1;min-width:0;border:0;outline:0;height:100%;font:400 14px/1 var(--ac-font);color:var(--ac-text);background:transparent}
+#agenda-circol .ac-search input::placeholder{color:var(--ac-text-3)}
+#agenda-circol .ac-btn-find{background:var(--ac-accent);color:#fff;border:0;border-radius:4px;font:700 14px/1 var(--ac-font);
+  padding:11px 20px;margin:0 20px 0 12px;white-space:nowrap;transition:background .15s}
+#agenda-circol .ac-btn-find:hover{background:var(--ac-accent-hover)}
+#agenda-circol .ac-views{display:flex;height:100%;border-left:1px solid var(--ac-border);padding:0 12px}
+#agenda-circol .ac-views button{background:none;border:0;border-bottom:3px solid transparent;height:100%;padding:0 10px;
+  font:400 14px/1 var(--ac-font);color:var(--ac-text-2)}
+#agenda-circol .ac-views button[aria-pressed="true"]{border-bottom-color:var(--ac-text);color:var(--ac-text);font-weight:700}
+#agenda-circol .ac-views button:hover{color:var(--ac-text)}
+
+/* ---------- Barra superior (fletxes, Avui, data) ---------- */
+#agenda-circol .ac-top{display:flex;align-items:center;gap:6px;margin-bottom:28px;position:relative}
+#agenda-circol .ac-arrow{background:none;border:0;padding:6px;line-height:0;color:var(--ac-text)}
+#agenda-circol .ac-arrow svg{width:9px;height:14px;fill:currentColor}
+#agenda-circol .ac-arrow:disabled{color:var(--ac-border);cursor:default}
+#agenda-circol .ac-today{border:1px solid var(--ac-border);background:#fff;border-radius:4px;font:400 12px/1 var(--ac-font);
+  color:var(--ac-text-2);padding:7px 11px;margin:0 14px 0 8px}
+#agenda-circol .ac-today:hover{border-color:var(--ac-text-2);color:var(--ac-text)}
+#agenda-circol .ac-datebtn{background:none;border:0;font:700 22px/1.2 var(--ac-font);color:var(--ac-text);display:flex;align-items:center;gap:8px;padding:0}
+#agenda-circol .ac-datebtn svg{width:10px;height:7px;fill:currentColor;margin-top:3px}
+#agenda-circol .ac-datepick{position:absolute;opacity:0;pointer-events:none;width:1px;height:1px;left:140px;top:30px}
+
+/* ---------- Llista ---------- */
+#agenda-circol .ac-list{list-style:none;margin:0;padding:0}
+#agenda-circol .ac-month{display:flex;align-items:center;gap:20px;margin:0 0 32px}
+#agenda-circol .ac-month::after{content:"";flex:1;height:1px;background:var(--ac-border)}
+#agenda-circol .ac-month time{font:400 12px/1.4 var(--ac-font);color:var(--ac-accent);white-space:nowrap}
+#agenda-circol .ac-row{display:flex;margin:0 0 40px}
+#agenda-circol .ac-datetag{width:56px;flex:none;text-align:center;padding-top:2px}
+#agenda-circol .ac-datetag .wd{display:block;font:400 11px/1 var(--ac-font);color:var(--ac-text-2);text-transform:uppercase;margin-bottom:5px}
+#agenda-circol .ac-datetag .dn{display:block;font:700 24px/1 var(--ac-font);color:var(--ac-text)}
+#agenda-circol .ac-wrap{flex:1;min-width:0;padding-left:28px}
+#agenda-circol .ac-event{display:flex;flex-direction:row-reverse;gap:40px;align-items:flex-start}
+#agenda-circol .ac-img{width:33%;flex:none}
+#agenda-circol .ac-img img{display:block;width:100%;height:auto;border-radius:0}
+#agenda-circol .ac-details{flex:1;min-width:0}
+#agenda-circol .ac-dt{font:400 14px/1.6 var(--ac-font);color:var(--ac-text);margin:0 0 8px}
+#agenda-circol .ac-dt .feat{color:var(--ac-accent);font-weight:700;margin-right:8px;display:inline-flex;align-items:center;gap:6px}
+#agenda-circol .ac-dt .feat svg{width:8px;height:10px;fill:currentColor}
+#agenda-circol .ac-title{font:700 24px/1.4 var(--ac-font);margin:0 0 12px;padding:0}
+#agenda-circol .ac-title a{color:var(--ac-text);background-image:linear-gradient(transparent calc(100% - 1px),var(--ac-accent) 1px);
+  background-repeat:no-repeat;background-size:0 100%;transition:background-size .25s}
+#agenda-circol .ac-title a:hover{background-size:100% 100%;color:var(--ac-text)}
+#agenda-circol .ac-venue{font:400 14px/1.6 var(--ac-font);color:var(--ac-text);font-style:normal;margin:0 0 12px;display:flex;flex-wrap:wrap;gap:0 8px;align-items:baseline}
+#agenda-circol .ac-venue b{font-weight:700;display:inline-flex;align-items:center;gap:6px}
+#agenda-circol .ac-venue b::before{content:"";width:8px;height:8px;background:var(--ac-accent);border-radius:1px;flex:none}
+#agenda-circol .ac-desc{font:400 14px/1.6 var(--ac-font);color:var(--ac-text-2);margin:0}
+#agenda-circol .ac-cats{margin-top:10px;display:flex;flex-wrap:wrap;gap:6px}
+#agenda-circol .ac-cats span{font:500 11px/1 var(--ac-font);color:var(--ac-accent);background:var(--ac-accent-bg);padding:5px 8px;border-radius:3px}
+/* destacat: barra vermella a l'esquerra */
+#agenda-circol .ac-row--featured .ac-wrap{border-left:3px solid var(--ac-accent);padding-left:25px}
+
+/* ---------- Mes ---------- */
+#agenda-circol .ac-grid{display:grid;grid-template-columns:repeat(7,minmax(0,1fr));border-top:1px solid var(--ac-border);border-left:1px solid var(--ac-border)}
+#agenda-circol .ac-grid .h{font:400 12px/1 var(--ac-font);color:var(--ac-text-2);text-align:center;padding:10px 4px;border-right:1px solid var(--ac-border);border-bottom:1px solid var(--ac-border);text-transform:uppercase}
+#agenda-circol .ac-cell{min-width:0;min-height:118px;border-right:1px solid var(--ac-border);border-bottom:1px solid var(--ac-border);padding:8px 8px 10px;background:#fff}
+#agenda-circol .ac-cell.out{background:#f7f6f6}
+#agenda-circol .ac-cell.out .n{color:var(--ac-border)}
+#agenda-circol .ac-cell .n{font:700 16px/1 var(--ac-font);display:inline-block;padding:4px 6px;border-radius:3px}
+#agenda-circol .ac-cell.today .n{background:var(--ac-accent);color:#fff}
+#agenda-circol .ac-cell .n button{all:unset;cursor:pointer}
+#agenda-circol .ac-mev{display:block;margin-top:8px;font:400 12px/1.35 var(--ac-font)}
+#agenda-circol .ac-mev small{display:block;color:var(--ac-text-2)}
+#agenda-circol .ac-mev strong{font-weight:700}
+#agenda-circol .ac-mev:hover strong{color:var(--ac-accent)}
+#agenda-circol .ac-mev.multi{background:rgba(196,13,13,.24);margin:8px -9px 0 -9px;padding:3px 9px;font-weight:700;white-space:nowrap;overflow:hidden;text-overflow:ellipsis;min-height:22px}
+#agenda-circol .ac-mev.multi:hover{background:rgba(196,13,13,.34)}
+#agenda-circol .ac-mev.feat{border-left:2px solid var(--ac-accent);padding-left:6px}
+
+/* ---------- Dia ---------- */
+#agenda-circol .ac-daytime{display:flex;align-items:center;gap:20px;margin:0 0 24px}
+#agenda-circol .ac-daytime::after{content:"";flex:1;height:1px;background:var(--ac-border)}
+#agenda-circol .ac-daytime span{font:700 12px/1 var(--ac-font);color:var(--ac-text-2);text-transform:uppercase;letter-spacing:.5px}
+
+/* ---------- Missatges i càrrega ---------- */
+#agenda-circol .ac-msg{display:flex;align-items:center;gap:10px;border:1px solid var(--ac-border);border-radius:4px;padding:14px 18px;margin:0 0 32px;font:400 14px/1.5 var(--ac-font);color:var(--ac-text-2)}
+#agenda-circol .ac-msg svg{width:18px;height:18px;flex:none;fill:var(--ac-text-3)}
+#agenda-circol .ac-loader{display:flex;justify-content:center;gap:8px;padding:60px 0}
+#agenda-circol .ac-loader i{width:10px;height:10px;border-radius:50%;background:var(--ac-accent);opacity:.25;animation:acdot 1s infinite}
+#agenda-circol .ac-loader i:nth-child(2){animation-delay:.15s}#agenda-circol .ac-loader i:nth-child(3){animation-delay:.3s}
+@keyframes acdot{50%{opacity:1}}
+
+/* ---------- Navegació inferior + subscripció ---------- */
+#agenda-circol .ac-nav{display:flex;justify-content:space-between;align-items:center;border-top:1px solid var(--ac-border);padding-top:18px;margin-top:8px}
+#agenda-circol .ac-nav button{background:none;border:0;display:flex;align-items:center;gap:10px;font:400 14px/1 var(--ac-font);color:var(--ac-text);padding:4px 0}
+#agenda-circol .ac-nav button svg{width:7px;height:12px;fill:currentColor}
+#agenda-circol .ac-nav button:disabled{color:var(--ac-border);cursor:default}
+#agenda-circol .ac-nav button:not(:disabled):hover{color:var(--ac-accent)}
+#agenda-circol .ac-subs{display:flex;justify-content:flex-end;margin-top:28px;position:relative}
+#agenda-circol .ac-subs-btn{border:1px solid var(--ac-accent);color:var(--ac-accent);background:#fff;border-radius:4px;
+  font:500 13px/1 var(--ac-font);padding:11px 16px;display:flex;align-items:center;gap:10px}
+#agenda-circol .ac-subs-btn svg{width:10px;height:7px;fill:currentColor;transition:transform .15s}
+#agenda-circol .ac-subs-btn[aria-expanded="true"] svg{transform:rotate(180deg)}
+#agenda-circol .ac-subs-menu{position:absolute;right:0;bottom:calc(100% + 6px);background:#fff;border:1px solid var(--ac-border);border-radius:4px;
+  box-shadow:0 2px 12px rgba(0,0,0,.08);list-style:none;margin:0;padding:6px 0;min-width:240px;z-index:10}
+#agenda-circol .ac-subs-menu[hidden]{display:none}
+#agenda-circol .ac-subs-menu a,#agenda-circol .ac-subs-menu button{display:block;width:100%;text-align:left;background:none;border:0;padding:10px 18px;font:400 14px/1.3 var(--ac-font);color:var(--ac-text)}
+#agenda-circol .ac-subs-menu a:hover,#agenda-circol .ac-subs-menu button:hover{background:var(--ac-accent-bg);color:var(--ac-accent)}
+
+/* ---------- Mòbil ---------- */
+@media (max-width:767px){
+  #agenda-circol{padding:16px 12px 40px}
+  #agenda-circol .ac-bar{height:auto;flex-wrap:wrap;padding:0}
+  #agenda-circol .ac-search{flex:1 1 100%;height:50px;padding:0 12px;border-bottom:1px solid var(--ac-border)}
+  #agenda-circol .ac-btn-find{display:none}
+  #agenda-circol .ac-views{border-left:0;width:100%;justify-content:center;height:46px}
+  #agenda-circol .ac-datebtn{font-size:18px}
+  #agenda-circol .ac-row{margin-bottom:32px}
+  #agenda-circol .ac-datetag{width:40px}
+  #agenda-circol .ac-datetag .dn{font-size:20px}
+  #agenda-circol .ac-wrap{padding-left:14px}
+  #agenda-circol .ac-row--featured .ac-wrap{padding-left:12px}
+  #agenda-circol .ac-event{flex-direction:column;gap:14px}
+  #agenda-circol .ac-img{width:100%}
+  #agenda-circol .ac-title{font-size:18px}
+  #agenda-circol .ac-grid .h{font-size:10px;padding:8px 2px}
+  #agenda-circol .ac-cell{min-height:64px;padding:6px 4px}
+  #agenda-circol .ac-cell .n{font-size:13px}
+  #agenda-circol .ac-mev{display:none}
+  #agenda-circol .ac-cell.has::after{content:"";display:block;width:6px;height:6px;border-radius:50%;background:var(--ac-accent);margin:6px auto 0}
+  #agenda-circol .ac-nav .lbl-long{display:none}
+}
+</style>
+</head>
+<body style="margin:0;background:#fff">
+
+<!-- =====================================================================
+     Per canviar el feed, edita data-feed. Opcions:
+       data-per-pagina   → activitats per pàgina a la vista Llista
+       data-destacat     → paraula de categoria que marca un acte com a destacat
+       data-lloc         → nom del lloc per defecte si l'activitat no en té
+       data-adreca       → adreça per defecte
+     ===================================================================== -->
+<div id="agenda-circol"
+     data-feed="https://script.google.com/macros/s/AKfycbxs7bECiyrIaUlhQEcpsPBtYotdHGQDSeFQ8-t0Xev7-kaADZT3xFDgny6gOal-NU8d/exec?accio=rss"
+     data-per-pagina="10"
+     data-destacat="destacat"
+     data-lloc="El Círcol de Reus"
+     data-adreca="Plaça de Prim, Reus, Tarragona, España">
+
+  <div class="ac-bar" role="search">
+    <form class="ac-search" id="ac-form">
+      <svg viewBox="0 0 16 16" aria-hidden="true"><path d="M11.16 9.73l4.55 4.56-1.42 1.42-4.56-4.55A6.47 6.47 0 0 1 6.5 13 6.5 6.5 0 1 1 13 6.5c0 1.21-.33 2.34-.9 3.3l-.94-.07zM6.5 11a4.5 4.5 0 1 0 0-9 4.5 4.5 0 0 0 0 9z"/></svg>
+      <label class="ac-sr" for="ac-q">Cerca esdeveniments</label>
+      <input id="ac-q" type="search" placeholder="Cerca esdeveniment" autocomplete="off">
+      <button class="ac-btn-find" type="submit">Troba Esdeveniments</button>
+    </form>
+    <div class="ac-views" role="group" aria-label="Vista">
+      <button type="button" data-view="list" aria-pressed="true">Llista</button>
+      <button type="button" data-view="month" aria-pressed="false">Mes</button>
+      <button type="button" data-view="day" aria-pressed="false">Dia</button>
+    </div>
+  </div>
+
+  <div class="ac-top">
+    <button class="ac-arrow" id="ac-prev" type="button" aria-label="Anterior"><svg viewBox="0 0 10 16"><path d="M9.7 14.4l-1.5 1.5L.3 8 8.2.1l1.5 1.5L3.3 8z"/></svg></button>
+    <button class="ac-arrow" id="ac-next" type="button" aria-label="Següent"><svg viewBox="0 0 10 16"><path d="M.3 1.6L1.8.1 9.7 8l-7.9 7.9-1.5-1.5L6.7 8z"/></svg></button>
+    <button class="ac-today" id="ac-today" type="button">Avui</button>
+    <button class="ac-datebtn" id="ac-datebtn" type="button" aria-label="Tria una data">
+      <span id="ac-datelabel">Propers</span>
+      <svg viewBox="0 0 10 7" aria-hidden="true"><path d="M1.008.609L5 4.6 8.992.61l.958.958L5 6.517.05 1.566l.958-.958z"/></svg>
+    </button>
+    <input class="ac-datepick" id="ac-datepick" type="date" tabindex="-1" aria-hidden="true">
+  </div>
+
+  <div id="ac-body" aria-live="polite">
+    <div class="ac-loader" aria-label="S'està carregant..."><i></i><i></i><i></i></div>
+  </div>
+
+  <nav class="ac-nav" aria-label="Paginació">
+    <button type="button" id="ac-pprev"><svg viewBox="0 0 10 16"><path d="M9.7 14.4l-1.5 1.5L.3 8 8.2.1l1.5 1.5L3.3 8z"/></svg><span><span class="lbl-long">Esdeveniments </span><span id="ac-pprev-t">anteriors</span></span></button>
+    <button type="button" id="ac-pnext"><span><span class="lbl-long">Esdeveniments </span><span id="ac-pnext-t">posteriors</span></span><svg viewBox="0 0 10 16"><path d="M.3 1.6L1.8.1 9.7 8l-7.9 7.9-1.5-1.5L6.7 8z"/></svg></button>
+  </nav>
+
+  <div class="ac-subs">
+    <button class="ac-subs-btn" id="ac-subs-btn" type="button" aria-expanded="false" aria-controls="ac-subs-menu">
+      Subscriviu-vos al calendari
+      <svg viewBox="0 0 10 7" aria-hidden="true"><path d="M1.008.609L5 4.6 8.992.61l.958.958L5 6.517.05 1.566l.958-.958z"/></svg>
+    </button>
+    <ul class="ac-subs-menu" id="ac-subs-menu" hidden>
+      <li><a id="ac-subs-rss" href="#" target="_blank" rel="noopener">Feed RSS de l'agenda</a></li>
+      <li><button type="button" id="ac-subs-copy">Copia l'enllaç del feed</button></li>
+    </ul>
+  </div>
+</div>
+
+<script>
+(function () {
+  'use strict';
+
+  const root = document.getElementById('agenda-circol');
+  const $ = s => root.querySelector(s);
+
+  // ---------- Configuració (des dels atributs data-*) ----------
+  const params = new URLSearchParams(location.search);
+  const CFG = {
+    feed: params.get('feed') || root.dataset.feed,
+    perPagina: parseInt(root.dataset.perPagina, 10) || 10,
+    destacat: (root.dataset.destacat || 'destacat').toLowerCase(),
+    lloc: root.dataset.lloc || '',
+    adreca: root.dataset.adreca || '',
+    paraulesResum: 30,
+    proxy: root.dataset.proxy || ''   // opcional: prefix d'un proxy CORS si mai calgués
+  };
+
+  // ---------- Textos en català (format de The Events Calendar) ----------
+  const MESOS = ['gener','febrer','març','abril','maig','juny','juliol','agost','setembre','octubre','novembre','desembre'];
+  const DIES_CURTS = ['Dg','Dl','Dt','Dc','Dj','Dv','Ds'];
+  const DIES_GRID = ['Dl','Dt','Dc','Dj','Dv','Ds','Dg'];
+
+  const esc = s => String(s == null ? '' : s).replace(/[&<>"']/g, c => ({'&':'&amp;','<':'&lt;','>':'&gt;','"':'&quot;',"'":'&#39;'}[c]));
+  const dayKey = d => d.getFullYear() + '-' + String(d.getMonth() + 1).padStart(2, '0') + '-' + String(d.getDate()).padStart(2, '0');
+  const startOfDay = d => new Date(d.getFullYear(), d.getMonth(), d.getDate());
+  const addDays = (d, n) => new Date(d.getFullYear(), d.getMonth(), d.getDate() + n);
+  const hora = d => {                     // 7:00 pm
+    let h = d.getHours(), m = d.getMinutes(), ap = h >= 12 ? 'pm' : 'am';
+    h = h % 12 || 12;
+    return h + ':' + String(m).padStart(2, '0') + ' ' + ap;
+  };
+  const dataTEC = (d, ambAny) => MESOS[d.getMonth()] + ' ' + d.getDate() + (ambAny ? ', ' + d.getFullYear() : '');
+
+  // "novembre 17 @ 7:00 pm - 8:00 pm", igual que la web actual
+  function textDataHora(ev) {
+    const anyActual = new Date().getFullYear();
+    const s = ev.inici, e = ev.fi;
+    const ambAny = s.getFullYear() !== anyActual || (e && e.getFullYear() !== s.getFullYear());
+    let t = dataTEC(s, ambAny) + (ev.totElDia ? '' : ' @ ' + hora(s));
+    if (e) {
+      if (dayKey(e) === dayKey(s)) {
+        if (!ev.totElDia) t += ' - ' + hora(e);
+      } else {
+        t += ' - ' + dataTEC(e, ambAny) + (ev.totElDia ? '' : ' @ ' + hora(e));
+      }
+    }
+    return t;
+  }
+
+  // ---------- Lectura del feed RSS ----------
+  function fill(el, nom) {
+    if (!el) return null;
+    for (const c of el.children) if (c.localName === nom) return c;
+    return null;
+  }
+  const txt = (el, nom) => { const f = fill(el, nom); return f ? f.textContent.trim() : ''; };
+  const fills = (el, nom) => Array.from(el.children).filter(c => c.localName === nom);
+
+  function parseData(s) {
+    if (!s) return null;
+    s = s.trim();
+    let m = s.match(/^(\d{4})-(\d{2})-(\d{2})$/);
+    if (m) return { d: new Date(+m[1], +m[2] - 1, +m[3]), totElDia: true };
+    m = s.match(/^(\d{4})-(\d{2})-(\d{2})[T ](\d{2}):(\d{2})(?::\d{2})?$/);       // sense zona → hora local
+    if (m) return { d: new Date(+m[1], +m[2] - 1, +m[3], +m[4], +m[5]), totElDia: false };
+    const d = new Date(s);
+    if (isNaN(d)) return null;
+    return { d: d, totElDia: d.getHours() === 0 && d.getMinutes() === 0 };
+  }
+
+  // Treu el text de la descripció del content:encoded (sense cartell, Quan/On/Ponent ni enllaços)
+  function descripcioNeta(html, resum) {
+    if (html) {
+      const doc = new DOMParser().parseFromString(html, 'text/html');
+      const parts = [];
+      doc.body.querySelectorAll('p, li').forEach(p => {
+        if (p.querySelector('img')) return;
+        const t = p.textContent.replace(/\s+/g, ' ').trim();
+        if (!t) return;
+        if (/^(Quan|On|Ponent|Lloc|Data|Hora)\s*:/i.test(t)) return;
+        const a = p.querySelector('a');
+        if (a && a.textContent.trim() === t) return;          // paràgraf que només és un enllaç
+        parts.push(t);
+      });
+      if (parts.length) return parts.join(' ');
+    }
+    // Resum de RSS.gs: "data · lloc · A càrrec de X. Descripció"
+    if (resum) {
+      const i = resum.indexOf('. ');
+      return (i > -1 && /·|@|\d{1,2}:\d{2}/.test(resum.slice(0, i))) ? resum.slice(i + 2) : resum;
+    }
+    return '';
+  }
+
+  function retalla(text, n) {
+    const w = text.split(/\s+/);
+    return w.length > n ? w.slice(0, n).join(' ') + ' […]' : text;
+  }
+
+  function imatgeItem(it, html) {
+    const thumb = fill(it, 'thumbnail');
+    if (thumb && thumb.getAttribute('url')) return thumb.getAttribute('url').replace(/=w\d+$/, '=w800');
+    const mc = fill(it, 'content');
+    if (mc && mc.getAttribute('url')) return mc.getAttribute('url') + (/googleusercontent/.test(mc.getAttribute('url')) ? '=w800' : '');
+    const enc = fill(it, 'enclosure');
+    if (enc && /^image\//.test(enc.getAttribute('type') || '')) return enc.getAttribute('url');
+    const m = html && html.match(/<img[^>]+src=["']([^"']+)/i);
+    return m ? m[1] : '';
+  }
+
+  function parseFeed(xmlText) {
+    const xml = new DOMParser().parseFromString(xmlText, 'application/xml');
+    if (xml.querySelector('parsererror')) throw new Error('El feed no és un XML vàlid.');
+    const channel = xml.getElementsByTagName('channel')[0];
+    if (!channel) throw new Error('El feed no té l’element <channel>.');
+
+    const avui = startOfDay(new Date());
+    return fills(channel, 'item').map((it, idx) => {
+      const html = txt(it, 'encoded');
+      const ini = parseData(txt(it, 'startdate')) || parseData(txt(it, 'pubDate'));
+      if (!ini) return null;
+      const fiP = parseData(txt(it, 'enddate'));
+      const lloc = txt(it, 'location');
+      const coma = lloc.indexOf(',');
+      const cats = fills(it, 'category').map(c => c.textContent.trim()).filter(Boolean);
+      const ev = {
+        id: txt(it, 'guid') || txt(it, 'link') || 'ev' + idx,
+        titol: txt(it, 'title'),
+        enllac: txt(it, 'link') || '#',
+        inici: ini.d,
+        fi: fiP ? fiP.d : null,
+        totElDia: ini.totElDia,
+        llocTitol: lloc ? (coma > -1 ? lloc.slice(0, coma).trim() : lloc) : CFG.lloc,
+        llocAdreca: lloc ? (coma > -1 ? lloc.slice(coma + 1).trim() : '') : CFG.adreca,
+        ponent: txt(it, 'creator'),
+        categories: cats,
+        destacat: cats.some(c => c.toLowerCase().indexOf(CFG.destacat) > -1),
+        descripcio: descripcioNeta(html, txt(it, 'description')),
+        imatge: imatgeItem(it, html)
+      };
+      // Dia en què es llista: si ja ha començat però encara dura, surt avui (com fa la web actual)
+      ev.diaLlista = (ev.fi && ev.inici < avui && ev.fi >= avui) ? avui : startOfDay(ev.inici);
+      return ev;
+    }).filter(Boolean).sort((a, b) => a.diaLlista - b.diaLlista || a.inici - b.inici);
+  }
+
+  async function carregaFeed() {
+    const url = CFG.proxy ? CFG.proxy + encodeURIComponent(CFG.feed) : CFG.feed;
+    const r = await fetch(url, { redirect: 'follow' });
+    if (!r.ok) throw new Error('El servidor ha respost ' + r.status + '.');
+    return parseFeed(await r.text());
+  }
+
+  // ---------- Estat ----------
+  const S = {
+    events: [],
+    vista: 'list',
+    desDe: startOfDay(new Date()),   // data inicial de la llista
+    pagina: 0,
+    mes: new Date(new Date().getFullYear(), new Date().getMonth(), 1),
+    dia: startOfDay(new Date()),
+    cerca: ''
+  };
+
+  function filtrats() {
+    const q = S.cerca.trim().toLowerCase();
+    if (!q) return S.events;
+    const n = s => s.normalize('NFD').replace(/[̀-ͯ]/g, '').toLowerCase();
+    const nq = n(q);
+    return S.events.filter(e => n([e.titol, e.descripcio, e.llocTitol, e.llocAdreca, e.ponent, e.categories.join(' ')].join(' ')).indexOf(nq) > -1);
+  }
+
+  // Un esdeveniment "toca" un dia si hi comença o si és de diversos dies i el cobreix
+  const tocaDia = (e, d) => {
+    const s = startOfDay(e.inici), f = e.fi ? startOfDay(e.fi) : s;
+    return d >= s && d <= f;
+  };
+
+  // ---------- Peces HTML ----------
+  const ICO_FEAT = '<svg viewBox="0 0 8 10" aria-hidden="true"><path fill-rule="evenodd" d="M0 0h8v10L4.049 7.439 0 10V0z"/></svg>';
+
+  function htmlEsdeveniment(e, diaEtiqueta) {
+    const d = diaEtiqueta || e.diaLlista;
+    return `
+    <li class="ac-row${e.destacat ? ' ac-row--featured' : ''}">
+      <div class="ac-datetag">
+        <time datetime="${dayKey(d)}" aria-hidden="true">
+          <span class="wd">${DIES_CURTS[d.getDay()]}</span>
+          <span class="dn">${d.getDate()}</span>
+        </time>
+      </div>
+      <div class="ac-wrap">
+        <article class="ac-event">
+          ${e.imatge ? `<div class="ac-img"><a href="${esc(e.enllac)}" tabindex="-1" aria-hidden="true"><img src="${esc(e.imatge)}" alt="" loading="lazy" onerror="this.closest('.ac-img').remove()"></a></div>` : ''}
+          <div class="ac-details">
+            <header>
+              <div class="ac-dt">${e.destacat ? `<span class="feat">${ICO_FEAT}<span class="ac-sr">Destacats</span></span>` : ''}<time datetime="${dayKey(e.inici)}">${esc(textDataHora(e))}</time></div>
+              <h3 class="ac-title"><a href="${esc(e.enllac)}" title="${esc(e.titol)}" rel="bookmark">${esc(e.titol)}</a></h3>
+              ${(e.llocTitol || e.llocAdreca) ? `<address class="ac-venue">${e.llocTitol ? `<b>${esc(e.llocTitol)}</b>` : ''}${e.llocAdreca ? `<span>${esc(e.llocAdreca)}</span>` : ''}</address>` : ''}
+            </header>
+            ${e.descripcio ? `<p class="ac-desc">${esc(retalla(e.descripcio, CFG.paraulesResum))}</p>` : ''}
+          </div>
+        </article>
+      </div>
+    </li>`;
+  }
+
+  const ICO_INFO = '<svg viewBox="0 0 18 18" aria-hidden="true"><path d="M9 0a9 9 0 1 1 0 18A9 9 0 0 1 9 0zm0 1.5a7.5 7.5 0 1 0 0 15 7.5 7.5 0 0 0 0-15zM9.75 7.5v6h-1.5v-6h1.5zM9 4.5a.94.94 0 1 1 0 1.88.94.94 0 0 1 0-1.88z"/></svg>';
+  const missatge = t => `<div class="ac-msg">${ICO_INFO}<span>${t}</span></div>`;
+
+  // ---------- Vista Llista ----------
+  function pintaLlista() {
+    const tots = filtrats().filter(e => e.diaLlista >= S.desDe || (e.fi && e.fi >= S.desDe));
+    const total = Math.max(1, Math.ceil(tots.length / CFG.perPagina));
+    S.pagina = Math.min(S.pagina, total - 1);
+    const pag = tots.slice(S.pagina * CFG.perPagina, (S.pagina + 1) * CFG.perPagina);
+
+    const esAvui = dayKey(S.desDe) === dayKey(startOfDay(new Date()));
+    if (esAvui && S.pagina === 0) {
+      $('#ac-datelabel').textContent = 'Propers';
+    } else if (pag.length) {
+      const a = pag[0].diaLlista, b = pag[pag.length - 1].diaLlista;
+      $('#ac-datelabel').textContent = dataTEC(a) + (dayKey(a) !== dayKey(b) ? ' - ' + dataTEC(b) : '');
+    } else {
+      $('#ac-datelabel').textContent = 'A partir de ' + dataTEC(S.desDe);
+    }
+
+    let h = '';
+    if (!pag.length) {
+      h = missatge(S.cerca ? `No hi ha esdeveniments propers que coincideixin amb «${esc(S.cerca)}».` : 'No hi ha esdeveniments programats a partir d’aquesta data.');
+    } else {
+      h = '<ul class="ac-list">';
+      let mesAnt = '';
+      pag.forEach(e => {
+        const m = MESOS[e.diaLlista.getMonth()] + ' ' + e.diaLlista.getFullYear();
+        if (m !== mesAnt) { h += `<li class="ac-month"><time>${m}</time></li>`; mesAnt = m; }
+        h += htmlEsdeveniment(e);
+      });
+      h += '</ul>';
+    }
+    $('#ac-body').innerHTML = h;
+
+    $('#ac-pprev-t').textContent = 'anteriors';
+    $('#ac-pnext-t').textContent = 'posteriors';
+    $('#ac-pprev').disabled = S.pagina === 0;
+    $('#ac-pnext').disabled = S.pagina >= total - 1;
+    $('#ac-prev').disabled = $('#ac-pprev').disabled;
+    $('#ac-next').disabled = $('#ac-pnext').disabled;
+  }
+
+  // ---------- Vista Mes ----------
+  function pintaMes() {
+    const any = S.mes.getFullYear(), mes = S.mes.getMonth();
+    $('#ac-datelabel').textContent = MESOS[mes] + ' ' + any;
+    const ev = filtrats();
+    const primer = new Date(any, mes, 1);
+    const desfase = (primer.getDay() + 6) % 7;            // la setmana comença en dilluns
+    const inici = addDays(primer, -desfase);
+    const avui = dayKey(new Date());
+
+    let h = '<div class="ac-grid" role="grid">' + DIES_GRID.map(d => `<div class="h" role="columnheader">${d}</div>`).join('');
+    const diesMes = new Date(any, mes + 1, 0).getDate();
+    const cel = Math.ceil((desfase + diesMes) / 7) * 7;          // setmanes senceres
+    for (let i = 0; i < cel; i++) {
+      const d = addDays(inici, i);
+      const delDia = ev.filter(e => tocaDia(e, d));
+      const cls = ['ac-cell'];
+      if (d.getMonth() !== mes) cls.push('out');
+      if (dayKey(d) === avui) cls.push('today');
+      if (delDia.length) cls.push('has');
+      h += `<div class="${cls.join(' ')}" role="gridcell">
+        <span class="n">${delDia.length ? `<button type="button" data-dia="${dayKey(d)}" aria-label="Veure el ${d.getDate()} de ${MESOS[d.getMonth()]}">${d.getDate()}</button>` : d.getDate()}</span>
+        ${delDia.map(e => {
+          // Actes de diversos dies: una franja contínua; el títol només el primer dia, cada dilluns i l'1 de mes
+          if (e.fi && dayKey(e.fi) !== dayKey(e.inici)) {
+            const ambText = dayKey(d) === dayKey(e.inici) || d.getDay() === 1 || d.getDate() === 1;
+            return `<a class="ac-mev multi" href="${esc(e.enllac)}" title="${esc(e.titol)}">${ambText ? esc(e.titol) : '&nbsp;'}</a>`;
+          }
+          return `<a class="ac-mev${e.destacat ? ' feat' : ''}" href="${esc(e.enllac)}"><small>${e.totElDia ? 'Tot el dia' : hora(e.inici)}</small><strong>${esc(e.titol)}</strong></a>`;
+        }).sort((a, b) => (b.indexOf(' multi') > -1) - (a.indexOf(' multi') > -1)).join('')}
+      </div>`;
+    }
+    h += '</div>';
+    if (S.cerca && !ev.some(e => e.inici.getMonth() === mes && e.inici.getFullYear() === any)) {
+      h = missatge(`No hi ha esdeveniments aquest mes que coincideixin amb «${esc(S.cerca)}».`) + h;
+    }
+    $('#ac-body').innerHTML = h;
+
+    $('#ac-pprev-t').textContent = MESOS[(mes + 11) % 12];
+    $('#ac-pnext-t').textContent = MESOS[(mes + 1) % 12];
+    ['#ac-pprev', '#ac-pnext', '#ac-prev', '#ac-next'].forEach(s => $(s).disabled = false);
+  }
+
+  // ---------- Vista Dia ----------
+  function pintaDia() {
+    const d = S.dia;
+    $('#ac-datelabel').textContent = dataTEC(d, true);
+    const delDia = filtrats().filter(e => tocaDia(e, d)).sort((a, b) => a.inici - b.inici);
+    let h;
+    if (!delDia.length) {
+      h = missatge(`No hi ha esdeveniments programats el ${d.getDate()} de ${MESOS[d.getMonth()]} de ${d.getFullYear()}.`);
+    } else {
+      h = '<ul class="ac-list">';
+      let hAnt = '';
+      delDia.forEach(e => {
+        const hh = (e.totElDia || startOfDay(e.inici) < d) ? 'Tot el dia' : hora(e.inici);
+        if (hh !== hAnt) { h += `<li class="ac-daytime"><span>${hh}</span></li>`; hAnt = hh; }
+        h += htmlEsdeveniment(e, d);
+      });
+      h += '</ul>';
+    }
+    $('#ac-body').innerHTML = h;
+    $('#ac-pprev-t').textContent = 'del dia anterior';
+    $('#ac-pnext-t').textContent = 'del dia següent';
+    ['#ac-pprev', '#ac-pnext', '#ac-prev', '#ac-next'].forEach(s => $(s).disabled = false);
+  }
+
+  function pinta() {
+    root.querySelectorAll('.ac-views button').forEach(b => b.setAttribute('aria-pressed', String(b.dataset.view === S.vista)));
+    if (S.vista === 'month') pintaMes();
+    else if (S.vista === 'day') pintaDia();
+    else pintaLlista();
+  }
+
+  function mou(dir) {
+    if (S.vista === 'month') S.mes = new Date(S.mes.getFullYear(), S.mes.getMonth() + dir, 1);
+    else if (S.vista === 'day') S.dia = addDays(S.dia, dir);
+    else S.pagina = Math.max(0, S.pagina + dir);
+    pinta();
+    if (S.vista === 'list') root.scrollIntoView({ behavior: 'smooth', block: 'start' });
+  }
+
+  // ---------- Esdeveniments de la interfície ----------
+  $('#ac-form').addEventListener('submit', ev => { ev.preventDefault(); S.cerca = $('#ac-q').value; S.pagina = 0; pinta(); });
+  $('#ac-q').addEventListener('search', () => { if (!$('#ac-q').value) { S.cerca = ''; S.pagina = 0; pinta(); } });
+
+  root.querySelectorAll('.ac-views button').forEach(b => b.addEventListener('click', () => { S.vista = b.dataset.view; pinta(); }));
+
+  $('#ac-prev').addEventListener('click', () => mou(-1));
+  $('#ac-next').addEventListener('click', () => mou(1));
+  $('#ac-pprev').addEventListener('click', () => mou(-1));
+  $('#ac-pnext').addEventListener('click', () => mou(1));
+
+  $('#ac-today').addEventListener('click', () => {
+    const avui = startOfDay(new Date());
+    S.desDe = avui; S.pagina = 0; S.dia = avui;
+    S.mes = new Date(avui.getFullYear(), avui.getMonth(), 1);
+    pinta();
+  });
+
+  const dp = $('#ac-datepick');
+  $('#ac-datebtn').addEventListener('click', () => {
+    const ref = S.vista === 'month' ? S.mes : S.vista === 'day' ? S.dia : S.desDe;
+    dp.value = dayKey(ref);
+    if (dp.showPicker) { try { dp.showPicker(); return; } catch (e) {} }
+    dp.focus(); dp.click();
+  });
+  dp.addEventListener('change', () => {
+    if (!dp.value) return;
+    const [y, m, d] = dp.value.split('-').map(Number);
+    const dt = new Date(y, m - 1, d);
+    S.desDe = dt; S.pagina = 0; S.dia = dt; S.mes = new Date(y, m - 1, 1);
+    pinta();
+  });
+
+  $('#ac-body').addEventListener('click', ev => {
+    const b = ev.target.closest('[data-dia]');
+    if (!b) return;
+    const [y, m, d] = b.dataset.dia.split('-').map(Number);
+    S.dia = new Date(y, m - 1, d); S.vista = 'day'; pinta();
+  });
+
+  // Subscripció
+  const sb = $('#ac-subs-btn'), sm = $('#ac-subs-menu');
+  $('#ac-subs-rss').href = CFG.feed;
+  sb.addEventListener('click', () => { const o = sm.hidden; sm.hidden = !o; sb.setAttribute('aria-expanded', String(o)); });
+  document.addEventListener('click', ev => { if (!ev.target.closest('.ac-subs')) { sm.hidden = true; sb.setAttribute('aria-expanded', 'false'); } });
+  $('#ac-subs-copy').addEventListener('click', async ev => {
+    try { await navigator.clipboard.writeText(CFG.feed); ev.target.textContent = 'Enllaç copiat ✓'; }
+    catch (e) { prompt('Copia aquest enllaç:', CFG.feed); }
+    setTimeout(() => { ev.target.textContent = 'Copia l’enllaç del feed'; }, 2000);
+  });
+
+  // ---------- Inici ----------
+  carregaFeed()
+    .then(evs => { S.events = evs; pinta(); })
+    .catch(err => {
+      console.error('[Agenda RSS]', err);
+      $('#ac-body').innerHTML = missatge('No s’ha pogut carregar l’agenda en aquest moment. Torna-ho a provar d’aquí a una estona.');
+      ['#ac-pprev', '#ac-pnext', '#ac-prev', '#ac-next'].forEach(s => $(s).disabled = true);
+    });
+})();
+</script>
+</body>
+</html>
